@@ -211,7 +211,8 @@ def prepare_single(item):
     cv5 = cornerCV(amap, 5)
     return list(key)+[n, enr1, enr3, cv3, cv5]
 
-def controlRegions(midcombs, res, minshift=10**5, maxshift=10**6, nshifts=1):
+def get_control_regions(midcombs, res, minshift=10**5, maxshift=10**6,
+                        nshifts=1, trans=False):
     minbin = minshift//res
     maxbin = maxshift//res
     for start, end, p1, p2 in midcombs:
@@ -219,7 +220,13 @@ def controlRegions(midcombs, res, minshift=10**5, maxshift=10**6, nshifts=1):
             shift = np.random.randint(minbin, maxbin)
             sign = np.sign(np.random.random() - 0.5).astype(int)
             shift *= sign
-            yield start+shift, end+shift, p1, p2
+            if trans:
+                shift2 = np.random.randint(minbin, maxbin)
+                sign2 = np.sign(np.random.random() - 0.5).astype(int)
+                shift2 *= sign2
+            else:
+                shift2 = shift
+            yield start+shift, end+shift2, p1, p2
 
 def get_expected_matrix(left_interval, right_interval, expected, local):
     lo_left, hi_left = left_interval
@@ -336,15 +343,8 @@ def _do_pileups(mids, data, binsize, pad, expected, mindist, maxdist, local,
         mymap += np.rot90(np.fliplr(np.triu(mymap, 1)))
     return mymap, n, cov_start, cov_end
 
-def chrom_mids(chroms, mids, kind):
-    for chrom in chroms:
-        if kind=='bed':
-            yield chrom, mids[mids['chr']==chrom]
-        else:
-            yield chrom, mids[mids['chr1']==chrom]
-
 def pileups(chrommids, c, pad=7, ctrl=False, local=False,
-            two_beds=False, ordered_mids=True,
+            two_beds=False, ordered_mids=True, trans=False,
             minshift=10**5, maxshift=10**6, nshifts=1, expected=False,
             mindist=0, maxdist=10**9, kind='bed', anchor=None,
             balance=True, cov_norm=False,
@@ -369,7 +369,7 @@ def pileups(chrommids, c, pad=7, ctrl=False, local=False,
         expected = np.nan_to_num(expected[expected['chrom']==chrom]['balanced.avg'].values) #Always named like this by cooltools, irrespective of --weight-name
         logging.info('Doing expected')
     else:
-        data = get_data(chrom, c, balance, local)
+        data = get_data(chrom,  c, balance, local)
 
     if cov_norm and (expected is False) and (balance is False):
         coverage = np.nan_to_num(np.ravel(np.sum(data, axis=0))) + \
@@ -395,15 +395,17 @@ def pileups(chrommids, c, pad=7, ctrl=False, local=False,
 
     if ctrl:
         if kind == 'bed':
-            mids = controlRegions(get_combinations(mids=mids, res=c.binsize,
+            mids = get_control_regions(get_combinations(mids=mids, res=c.binsize,
                                                    mids2=mids2,
                                                    ordered_mids=ordered_mids,
                                                    local=local,
                                                    anchor=anchor),
-                                   c.binsize, minshift, maxshift, nshifts)
+                                   c.binsize, minshift, maxshift, nshifts,
+                                   trans=trans)
         else:
-            mids = controlRegions(get_positions_pairs(mids, c.binsize),
-                                   c.binsize, minshift, maxshift, nshifts)
+            mids = get_control_regions(get_positions_pairs(mids, c.binsize),
+                                   c.binsize, minshift, maxshift, nshifts,
+                                   trans=trans)
     else:
         if kind == 'bed':
             mids = get_combinations(mids=mids, res=c.binsize,
@@ -436,8 +438,26 @@ def norm_coverage(loop, cov_start, cov_end):
     loop[np.isnan(loop)]=0
     return loop
 
+def chrom_mids(chroms, mids, kind, trans=False):
+    if not trans:
+        for chrom in chroms:
+            if kind=='bed':
+                m = mids[mids['chr']==chrom]
+                yield chrom, m, chrom, m
+            else:
+                m = mids[mids['chr1']==chrom]
+                yield chrom, chrom, m
+    else:
+        for chrom1, chrom2 in itertools.combinations(chroms, 2):
+            if kind=='bed':
+                yield (chrom1, mids[mids['chr']==chrom1],
+                       chrom2, mids[mids['chr']==chrom2])
+            else:
+                yield (chrom1, chrom2,
+                       mids[(mids['chr1']==chrom1) & (mids['chr2']==chrom2)])
+
 def pileupsWithControl(mids, filename, mids2=None, pad=100, nproc=1,
-                       ordered_mids=True,
+                       ordered_mids=True, trans=False,
                        chroms=None, local=False,
                        minshift=100000, maxshift=1000000, nshifts=10,
                        expected=None,
@@ -462,10 +482,10 @@ def pileupsWithControl(mids, filename, mids2=None, pad=100, nproc=1,
                 anchor=anchor, balance=balance, cov_norm=cov_norm,
                 rescale=rescale, rescale_pad=rescale_pad,
                 rescale_size=rescale_size)
-    chrommids = chrom_mids(chroms, mids, kind)
+    chrommids = chrom_mids(chroms, mids, kind, trans=trans)
     if mids2 is not None:
         chrommids2 = chrom_mids(chroms, mids2, 'bed')
-        chrommids = zip(chrommids, chrommids2)
+        chrommids = zip(chrommids[:2], chrommids2[:2])
         two_beds = True
     else:
         two_beds = False
@@ -551,7 +571,7 @@ def pileupsByWindow(chrom_mids, c, pad=7, ctrl=False,
         return mymaps
     for i, (b, m, p) in curmids[['Bin', 'Mids', 'Pad']].astype(int).iterrows():
         if ctrl:
-            current = controlRegions(get_combinations(curmids, c.binsize,
+            current = get_control_regions(get_combinations(curmids, c.binsize,
                                                     anchor=(chrom, m, m)),
                                        c.binsize, minshift, maxshift, nshifts)
         else:
