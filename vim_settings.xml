@@ -1,0 +1,35 @@
+<application>
+  <component name="VimEditorSettings">
+    <editor>
+      <key-repeat enabled="true" />
+    </editor>
+  </component>
+  <component name="VimKeySettings">
+    <shortcut-conflicts />
+  </component>
+  <component name="VimMarksSettings">
+    <globalmarks />
+    <filemarks>
+      <file name="/Dummy.txt" timestamp="1587609228066">
+        <mark key="[" line="0" column="0" />
+      </file>
+      <file name="/Python Console" timestamp="1587609350680">
+        <mark key="[" line="0" column="0" />
+      </file>
+    </filemarks>
+    <jumps />
+  </component>
+  <component name="VimSearchSettings">
+    <search>
+      <last-dir>0</last-dir>
+      <show-last>false</show-last>
+    </search>
+  </component>
+  <component name="VimSettings">
+    <state version="6" enabled="true" />
+    <notifications>
+      <idea-join enabled="false" />
+      <idea-put enabled="false" />
+    </notifications>
+  </component>
+</application>
