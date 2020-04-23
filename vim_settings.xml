@@ -10,16 +10,16 @@
   <component name="VimMarksSettings">
     <globalmarks />
     <filemarks>
-      <file name="/Dummy.txt" timestamp="1587609228066">
+      <file name="/Dummy.txt" timestamp="1587612910788">
         <mark key="[" line="0" column="0" />
       </file>
-      <file name="/Python Console" timestamp="1587609350680">
-        <mark key="[" line="0" column="0" />
-      </file>
+      <file name="$USER_HOME$/Desktop/trunk/coolpuppy/__init__.py" timestamp="1587612188082" />
       <file name="$USER_HOME$/Desktop/trunk/coolpuppy/plotpup.py" timestamp="1587611167148" />
-      <file name="$USER_HOME$/Desktop/trunk/coolpuppy/coolpup.py" timestamp="1587611468088" />
     </filemarks>
     <jumps />
+  </component>
+  <component name="VimRegisterSettings">
+    <registers />
   </component>
   <component name="VimSearchSettings">
     <search>
